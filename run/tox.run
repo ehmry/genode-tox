@@ -1,0 +1,107 @@
+#
+# \brief  Test of Tox terminal
+# \author Emery Hemingway
+# \date   2016-06-02
+#
+
+set build_components {
+	core init
+	drivers/nic
+	drivers/timer
+	server/tox_terminal
+	test/terminal_echo
+}
+
+source ${genode_dir}/repos/base/run/platform_drv.inc
+append_platform_drv_build_components
+
+build $build_components
+
+create_boot_directory
+
+append config {
+<config verbose="yes">
+	<parent-provides>
+		<service name="CPU"/>
+		<service name="IO_MEM"/>
+		<service name="IO_PORT"/>
+		<service name="IRQ"/>
+		<service name="LOG"/>
+		<service name="PD"/>
+		<service name="RAM"/>
+		<service name="RM"/>
+		<service name="ROM"/>
+	</parent-provides>
+	<default-route>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>}
+
+append_platform_drv_config
+
+append config {
+	<start name="timer">
+		<resource name="RAM" quantum="1M"/>
+		<provides> <service name="Timer"/> </provides>
+	</start>
+
+	<start name="nic_drv">
+		<resource name="RAM" quantum="4M"/>
+		<provides> <service name="Nic"/> </provides>
+	</start>
+
+	<start name="tox_terminal">
+		<resource name="RAM" quantum="16M"/>
+		<provides> <service name="Terminal"/> </provides>
+		<config name="Echo Test" status="Genode terminal echo test" ephemeral="yes">
+			<bootstrap host="144.76.60.215" port="33445"
+			           public_key="04119E835DF3E78BACF0F84235B300546AF8B936F035185E2A8E9E0A67C8924F"/>
+			<bootstrap host="46.38.239.179"
+			           public_key="F5A1A38EFB6BD3C2C8AF8B10D85F0F89E931704D349F1D0720C3C4059AF2440A"/>
+			<bootstrap host="130.133.110.14"
+			           public_key="461FA3776EF0FA655F1A05477DF1B3B614F7D6B124F7DB1DD4FE3C08B03B640F"/>
+			<bootstrap host="46.101.197.175" port="443"
+			           public_key="CD133B521159541FB1D326DE9850F5E56A6C724B5B8E5EB5CD8D950408E95707"/>
+			<bootstrap host="5.189.176.217" port="5190"
+			           public_key="2B2137E094F743AC8BD44652C55F41DFACC502F125E99E4FE24D40537489E32F"/>
+
+			<policy label="test-terminal_echo" id="50170FA7465F1A4113A5E89F7F3CC7B34740621750AC7087DB3512085E4C9309F3427394C1C9"/>
+		</config>
+		<route>
+			<any-service>
+				<child name="nic_drv"/> <parent/> <any-child/>
+			</any-service>
+		</route>
+	</start>
+
+	<start name="test-terminal_echo">
+		<resource name="RAM" quantum="16M" />
+	</start>
+
+</config>
+}
+
+install_config $config
+
+# generic modules
+set boot_modules {
+	core init ld.lib.so
+	libc.lib.so
+	lwip.lib.so
+	nic_drv
+	pthread.lib.so
+	test-terminal_echo
+	timer
+	toxcore.lib.so
+	tox_terminal
+}
+
+# platform-specific modules
+append_platform_drv_boot_modules
+
+build_boot_image $boot_modules
+
+append qemu_args " -nographic -net nic,model=e1000 -net user"
+append qemu_args " -net dump,file=/tmp/tox.pcap"
+
+#run_genode_until {child "test-libc" exited with exit value 0} 60
+run_genode_until forever

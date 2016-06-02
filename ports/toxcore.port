@@ -1,0 +1,10 @@
+LICENSE   := GPLv3
+VERSION   := head
+DOWNLOADS := toxcore.git
+
+URL(toxcore) := https://github.com/irungentoo/toxcore.git
+REV(toxcore) := 532629d486e3361c7d8d95b38293cc7d61dc4ee5
+DIR(toxcore) := src/lib/toxcore
+
+DIRS := include/toxcore
+DIR_CONTENT(include/toxcore) = src/lib/toxcore/toxcore/*.h
